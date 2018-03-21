@@ -1,0 +1,56 @@
+{
+    "mongo_db": "mongodb://localhost:27017/framework",
+    "clientUrl": "http://localhost:8080",
+    "server": {
+        "port": 8086,
+        "certificate": {
+            "cert": "",
+            "key": "",
+            "ca": ""
+        }
+    },
+    "mailserver": {
+        "host": "smtp.mailserver.tld",
+        "port": 587,
+        "username": "",
+        "password": "",
+        "sender": ""
+    },
+    "api": {
+        "domain": "http://localhost",
+        "signingKey": "",
+        "port": 8087,
+        "authentication": {
+            "password": {
+                "rounds": 11,
+                "minlen": 8
+            },
+            "providers": [
+                {
+                    "id": "local",
+                    "package": "local",
+                    "enabled": true,
+                    "activationLink": true
+                },
+                {
+                    "id": "github",
+                    "package": "github",
+                    "enabled": false,
+                    "clientID": "",
+                    "clientSecret": "",
+                    "name": "GitHub"
+                },
+                {
+                    "id": "google",
+                    "package": "google-oauth20",
+                    "enabled": false,
+                    "clientID": "",
+                    "clientSecret": "",
+                    "name": "Google",
+                    "scope": ["profile"]
+                }
+            ]
+        }
+        }
+    }
+}

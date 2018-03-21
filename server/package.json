@@ -1,0 +1,63 @@
+{
+    "name": "dapper-framework-server",
+    "version": "0.1.0",
+    "description": "The server for the Dapper Framework",
+    "scripts": {
+        "start": "cross-env NODE_ENV=development nodemon -L ./app --inspect --exec babel-node --presets env,stage-2",
+        "build": "babel app --out-dir dist --source-maps inline --copy-files",
+        "serve": "cross-env NODE_ENV=production node dist/index.js",
+        "postinstall": "cp -Rn app/data.sample app/data && cp -n config.sample.json config.json"
+    },
+    "engines": {
+        "node": ">=8.9.4"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/MrEliasen/dapper-framework.git"
+    },
+    "author": "Mark Eliasen",
+    "bugs": {
+        "url": "https://github.com/MrEliasen/dapper-framework/issues"
+    },
+    "nodemonConfig": {
+        "ignore": [
+            "node_modules/*",
+            "npm-debug.log",
+            "config.json"
+        ]
+    },
+    "dependencies": {
+        "bcrypt": "^1.0.3",
+        "bluebird": "^3.5.1",
+        "body-parser": "^1.18.2",
+        "chalk": "^2.3.1",
+        "content-filter": "^1.1.2",
+        "escape-string-regexp": "^1.0.5",
+        "event": "^1.0.0",
+        "express": "^4.16.2",
+        "helmet": "^3.11.0",
+        "jsonwebtoken": "^8.2.0",
+        "moment": "^2.20.1",
+        "mongoose": "^5.0.3",
+        "nodemailer": "^4.6.0",
+        "passport": "^0.4.0",
+        "passport-github": "^1.1.0",
+        "passport-google-oauth20": "^1.0.0",
+        "passport-local": "^1.0.0",
+        "readline-sync": "^1.4.7",
+        "socket.io": "^2.0.4",
+        "uuid": "^3.1.0"
+    },
+    "devDependencies": {
+        "babel-cli": "^6.26.0",
+        "babel-eslint": "^8.2.2",
+        "babel-plugin-module-resolver": "^3.1.0",
+        "babel-polyfill": "^6.26.0",
+        "babel-preset-env": "^1.6.1",
+        "babel-preset-stage-2": "^6.24.1",
+        "cross-env": "^5.1.3",
+        "eslint": "^4.15.0",
+        "eslint-config-google": "^0.9.1",
+        "nodemon": "^1.14.12"
+    }
+}
