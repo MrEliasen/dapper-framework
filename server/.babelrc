@@ -1,6 +1,8 @@
 {
     "presets": [
-        "env",
+        ["env", {
+          "modules": "commonjs"
+        }],
         "stage-2"
     ],
     "plugins": [
