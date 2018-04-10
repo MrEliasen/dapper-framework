@@ -7,7 +7,7 @@
         "start": "cross-env NODE_ENV=development nodemon -L ./src --inspect --exec babel-node --presets env,stage-2",
         "build": "babel src --out-dir build --source-maps inline --copy-files",
         "serve": "cross-env NODE_ENV=production node build/index.js",
-        "postinstall": "cp -Rn src/templates.sample src/templates"
+        "postinstall": "babel-node scripts/postinstall.js --presets env,stage-2"
     },
     "engines": {
         "node": ">=8.9.4"

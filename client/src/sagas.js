@@ -16,10 +16,10 @@ import {
     USER_AUTHENTICATE_ERROR,
     USER_AUTHENTICATE_SUCCESS,
     USER_LOGOUT,
+    NOTIFICATION_SET,
 } from 'shared/actionTypes';
 import {
     SOCKET_SEND,
-    NOTIFICATION_SET,
     NOTIFICATION_CLEAR,
 } from './components/app/types';
 import {
@@ -34,6 +34,7 @@ import {
 import {
     USER_DETAILS_GET,
     USER_DETAILS_UPDATE,
+    USER_DELETE,
 } from './components/account/types';
 
 // misc
@@ -337,6 +338,21 @@ function* unlinkProviderFromAccount(action) {
     yield getUserDetails(action);
 }
 
+function* deleteUserAccount(action) {
+    const response = yield call(doAPICall, `users/${action.payload.userId}`, null, 'delete', {
+        Authorization: `Bearer ${action.payload.authToken}`,
+    });
+
+    if (!response) {
+        return;
+    }
+
+    yield put({
+        type: USER_LOGOUT,
+        payload: null,
+    });
+}
+
 function* onAuthAttempt() {
     yield takeLatest(USER_AUTHENTICATE, checkLocalAuth);
 }
@@ -381,6 +397,10 @@ function* onUnlinkProvider() {
     yield takeLatest(AUTH_UNLINK, unlinkProviderFromAccount);
 }
 
+function* onAccountDelete() {
+    yield takeLatest(USER_DELETE, deleteUserAccount);
+}
+
 /* ** ** ** ** **  ** ** ** ** ** ** */
 
 function* routeChanged() {
@@ -409,6 +429,7 @@ function* Sagas() {
         onLinkProvider(),
         onProviderAuthAttempt(),
         onUnlinkProvider(),
+        onAccountDelete(),
     ]);
 }
 

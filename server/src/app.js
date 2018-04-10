@@ -33,7 +33,7 @@ export default class App {
     }
 
     /**
-     * Init the game server managers
+     * Init the server managers
      */
     async init() {
         // Listen for connections
@@ -64,6 +64,6 @@ export default class App {
      * @param {function} callback Will execute when done.
      */
     shutdown() {
-        this.Game.logger.info('Received shutdown signal, Running shutdown procedure');
+        this.App.logger.info('Received shutdown signal, Running shutdown procedure');
     }
 }

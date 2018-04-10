@@ -16,8 +16,6 @@ class Header extends React.Component {
         this.state = {
             isOpen: false,
         };
-
-        this.toggle = this.toggle.bind(this);
     }
 
     logout() {
@@ -29,7 +27,6 @@ class Header extends React.Component {
         if (this.props.loggedIn) {
             return (
                 <React.Fragment>
-                    <NavLink className="nav-link" to="/app-name/dashboard">Dashboard</NavLink>
                     <NavLink className="nav-link" to="/account">Account</NavLink>
                     <a className="nav-link" href="#" onClick={this.logout.bind(this)}>Logout</a>
                 </React.Fragment>
@@ -44,6 +41,7 @@ class Header extends React.Component {
         }
     }
 
+
     toggle() {
         this.setState({
             isOpen: !this.state.isOpen,
@@ -54,11 +52,20 @@ class Header extends React.Component {
         return (
             <Navbar color="primary-dark" dark expand="md" id="header">
                 <Container>
-                    <NavbarBrand href="#">Dapper Framework</NavbarBrand>
-                    <NavbarToggler onClick={this.toggle} className="mr-2" />
+                    <NavbarBrand href="#" onClick={() => this.props.history.push('/')}>Path To Power</NavbarBrand>
+                    <NavbarToggler onClick={this.toggle.bind(this)} className="mr-2" />
                     <Collapse isOpen={!this.state.isOpen} navbar>
                         <Nav className="mr-auto" navbar>
-                            <NavLink className="nav-link" exact to="/">Home</NavLink>
+                            {
+                                this.props.pages && this.props.pages.length > 0 &&
+                                this.props.pages.map((page, index) => {
+                                    if (!page.meta.showInNav) {
+                                        return null;
+                                    }
+
+                                    return <NavLink className="nav-link" key={index} exact to={'/' + page.meta.path}>{page.meta.title}</NavLink>;
+                                })
+                            }
                         </Nav>
                         <Nav className="ml-auto" navbar>
                             {this.renderNavAuth()}

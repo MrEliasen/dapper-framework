@@ -50,7 +50,7 @@ export default class UserManager {
             return;
         }
 
-        jwt.verify(action.payload, this.App.config.api.signingKey, async (err, decoded) => {
+        jwt.verify(action.payload, this.App.config.security.signingSecret, async (err, decoded) => {
             if (err) {
                 return this.App.socketManager.dispatchToSocket(socket, {
                     type: USER_AUTHENTICATE_ERROR,

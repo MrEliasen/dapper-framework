@@ -8,13 +8,15 @@ const path = require('path');
 const webpack = require('webpack');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const HTMLWebpackPlugin = require('html-webpack-plugin');
+// const Visualizer = require('webpack-visualizer-plugin');
 
 module.exports = {
     entry: [
         'babel-polyfill',
         './src/index.js',
     ],
-
+    mode: 'production',
+    devtool: 'cheap-module-source-map',
     output: {
         // the output bundle
         path: path.resolve(__dirname, 'dist'),
@@ -22,7 +24,6 @@ module.exports = {
         chunkFilename: '[id].[hash].bundle.js',
         publicPath: '/',
     },
-
     resolve: {
         alias: {
             react: path.resolve(__dirname, './node_modules/react'),
@@ -30,9 +31,6 @@ module.exports = {
             shared: path.resolve(__dirname, '../server/shared'),
         },
     },
-
-    devtool: '#inline-source-map',
-
     module: {
         rules: [
             {
@@ -118,12 +116,18 @@ module.exports = {
             },
         ],
     },
-
+    optimization: {
+        splitChunks: {
+            cacheGroups: {
+                commons: {
+                    test: /[\\/]node_modules[\\/]/,
+                    name: 'vendors',
+                    chunks: 'all',
+                },
+            },
+        },
+    },
     plugins: [
-        new webpack.optimize.UglifyJsPlugin({
-            sourceMap: false,
-            comments: false,
-        }),
         new webpack.LoaderOptionsPlugin({
             debug: false,
             minimize: true,
@@ -133,13 +137,11 @@ module.exports = {
             allChunks: true,
         }),
         new HTMLWebpackPlugin({
-                template: 'index.html',
-                inject: true,
+            template: 'index.html',
+            inject: true,
         }),
-        new webpack.DefinePlugin({
-            'process.env': {
-                NODE_ENV: JSON.stringify('production'),
-            },
-        }),
+        // new Visualizer({
+        //     filename: './statistics.html',
+        // }),
     ],
 };

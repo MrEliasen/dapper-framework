@@ -4,7 +4,7 @@ import {Link} from 'react-router-dom';
 import {connect} from 'react-redux';
 import {bindActionCreators} from 'redux';
 
-import FontAwesomeIcon from '@fortawesome/react-fontawesome';
+import Icon from '@fortawesome/react-fontawesome';
 import {Card, CardHeader, CardBody, Input, Button, Form, FormGroup} from 'reactstrap';
 import Notification from '../ui/notification';
 
@@ -16,7 +16,6 @@ class AuthLogin extends React.Component {
         super(props);
 
         this.state = {
-            strategies: null,
             email: '',
             password: '',
             error: '',
@@ -26,28 +25,36 @@ class AuthLogin extends React.Component {
     }
 
     componentDidMount() {
-        this.autoLogin();
+        const url = new URL(document.location);
+        const error = url.searchParams.get('error');
+
+        this.setState({
+            error: error || null,
+        });
+
+        this.props.getStrategies();
+        this.autoLogin(error ? false : true);
     }
 
-    autoLogin() {
+    autoLogin(doLogin = true) {
         const GETtoken = window.location.search.replace('?token=', '');
         let authToken = localStorage.getItem('authToken');
 
-        if (authToken) {
-            // if we have a GETtoken as well, link the provider (GETtoken) with
-            // the account we are already logged into.
-            if (GETtoken) {
-                this.props.linkProvider(authToken, GETtoken);
+        if (doLogin) {
+            if (authToken) {
+                // if we have a GETtoken as well, link the provider (GETtoken) with
+                // the account we are already logged into.
+                if (GETtoken) {
+                    this.props.linkProvider(authToken, GETtoken);
+                }
+
+                return this.props.authLogin(authToken);
             }
 
-            return this.props.authLogin(authToken);
+            if (GETtoken) {
+                return this.props.authProvider(GETtoken);
+            }
         }
-
-        if (GETtoken) {
-            return this.props.authProvider(GETtoken);
-        }
-
-        return this.props.getStrategies();
     }
 
     authenticate() {
@@ -73,14 +80,14 @@ class AuthLogin extends React.Component {
     render() {
         return (
             <Card className="card-small">
-                <CardHeader>Login</CardHeader>
+                <CardHeader>Let's do this!</CardHeader>
                 {
-                    this.props.strategies &&
+                    this.props.strategies.length > 0 &&
                     <CardBody className="text-center">
                         {this.showStatus()}
                         {
                             // if local authentication strategy is enabled
-                            this.props.strategies.find((provider) => provider.id === 'local') &&
+                            this.props.strategies.find((auth) => auth.id === 'local') &&
                             <Form>
                                 <Notification />
                                 <FormGroup>
@@ -116,7 +123,13 @@ class AuthLogin extends React.Component {
                                 <hr />
                             </Form>
                         }
-                        <p>You can also login using:</p>
+                        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Officia, laboriosam!</p>
+                        {
+                            this.state.error &&
+                            <p className="alert alert-danger">
+                                {this.state.error}
+                            </p>
+                        }
                         {
                             this.props.strategies.map((strat) => {
                                 if (strat.id === 'local') {
@@ -124,7 +137,7 @@ class AuthLogin extends React.Component {
                                 }
 
                                 return <a key={strat.id} className={`btn btn-block btn-primary btn-brand-${strat.id}`} href={strat.authUrl}>
-                                    <FontAwesomeIcon icon={['fab', strat.id]} /> {strat.name}
+                                    <Icon icon={['fab', strat.id]} /> Login with {strat.name}
                                 </a>;
                             })
                         }
@@ -143,7 +156,7 @@ function mapStateToProps(state) {
     return {
         authToken: state.account.authToken,
         loggedIn: state.account.loggedIn,
-        strategies: state.auth.strategies,
+        strategies: state.auth.strategies || [],
     };
 }
 

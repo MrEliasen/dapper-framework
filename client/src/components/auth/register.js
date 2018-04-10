@@ -2,8 +2,7 @@ import React from 'react';
 import {bindActionCreators} from 'redux';
 import {connect} from 'react-redux';
 
-
-import FontAwesomeIcon from '@fortawesome/react-fontawesome';
+import Icon from '@fortawesome/react-fontawesome';
 import {Card, CardHeader, CardBody, Input, Button, Form, FormGroup} from 'reactstrap';
 import Notification from '../ui/notification';
 import {userSignUp, getStrategies} from '../auth/actions';
@@ -38,14 +37,14 @@ class AuthRegister extends React.Component {
     render() {
         return (
             <Card className="card-small">
-                <CardHeader>Sign Up</CardHeader>
+                <CardHeader>Welcome to the party!</CardHeader>
                 {
-                    this.props.strategies &&
+                    this.props.strategies.length > 0 &&
                     <CardBody className="text-center">
                         <Notification />
                         {
                             // if local authentication strategy is enabled
-                            this.props.strategies.find((provider) => provider.id === 'local') &&
+                            this.props.strategies.find((auth) => auth.id === 'local') &&
                             <Form>
                                 <FormGroup>
                                     <Input
@@ -103,8 +102,8 @@ class AuthRegister extends React.Component {
                                     return null;
                                 }
 
-                                return <a key={strat.id} className={`btn btn-block btn-primary btn-brand-${strat.id}`} href={strat.authUrl}>
-                                    <FontAwesomeIcon icon={['fab', strat.id]} /> {strat.name}
+                                return <a key={strat.id} className={`btn btn-block btn-primary btn-brand-${strat.id}`} href={this.state.sending ? '#' : strat.authUrl}>
+                                    <Icon icon={['fab', strat.id]} /> Sign up with {strat.name}
                                 </a>;
                             })
                         }
@@ -117,7 +116,7 @@ class AuthRegister extends React.Component {
 
 function mapStateToProps(state) {
     return {
-        strategies: state.auth.strategies,
+        strategies: state.auth.strategies || [],
     };
 }
 

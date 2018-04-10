@@ -1,5 +1,4 @@
 import React from 'react';
-import timezones from 'moment-timezone';
 
 // UI
 import {Col, Card, CardHeader, CardBody, Button, Form, FormGroup, Label, Input} from 'reactstrap';
@@ -7,16 +6,6 @@ import {Col, Card, CardHeader, CardBody, Button, Form, FormGroup, Label, Input} 
 class AccountSettings extends React.Component {
     constructor(props) {
         super(props);
-
-        this.state = {
-            timezones: [],
-        };
-    }
-
-    componentDidMount() {
-        this.setState({
-            timezones: timezones.tz.names(),
-        });
     }
 
     render() {
@@ -32,10 +21,6 @@ class AccountSettings extends React.Component {
                             <Col col="9">
                                 <Input type="select" name="language" id="settings-language">
                                     <option>Select option</option>
-                                    <option>English</option>
-                                    <option>Spanish</option>
-                                    <option>French</option>
-                                    <option>German</option>
                                 </Input>
                             </Col>
                         </FormGroup>
@@ -43,11 +28,14 @@ class AccountSettings extends React.Component {
                             <Label for="settings-timezone" sm="3">Timezone</Label>
                             <Col col="9">
                                 <Input type="select" name="timezone" id="settings-timezone">
-                                    <option value="">Select option</option>
-                                    {
-                                        this.state.timezones.map((zoneName) => <option key={zoneName} value={zoneName}>{zoneName}</option>)
-                                    }
+                                    <option>Select option</option>
                                 </Input>
+                            </Col>
+                        </FormGroup>
+                        <FormGroup row>
+                            <Label for="settings-timestamp" sm="3">Timestamp</Label>
+                            <Col col="9">
+                                <Input name="timestamp" id="settings-timestamp" placeholder="hh:mm:ss" />
                             </Col>
                         </FormGroup>
                         <FormGroup row>

@@ -1,5 +1,4 @@
 import React from 'react';
-import {withRouter} from 'react-router-dom';
 import {Card, CardHeader, CardBody} from 'reactstrap';
 
 class AuthLogout extends React.Component {
@@ -7,26 +6,17 @@ class AuthLogout extends React.Component {
         super(props);
     }
 
-    componentDidMount() {
-        this.timer = setTimeout(() => {
-            this.props.history.push('/');
-        }, 2000);
-    }
-
-    componentWillUnmount() {
-        clearTimeout(this.timer);
-    }
-
+    // TODO: Move logout logic/state from app/header to this component
     render() {
         return (
             <Card className="card-small">
-                <CardHeader>Logged Out</CardHeader>
+                <CardHeader>You have been logged out</CardHeader>
                 <CardBody>
-                    <p>You have been logged out. You will be redirected in a moment.</p>
+                    <p>Sad to see you go, but hope to see you again some other time!</p>
                 </CardBody>
             </Card>
         );
     }
 };
 
-export default withRouter(AuthLogout);
+export default AuthLogout;

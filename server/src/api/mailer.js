@@ -19,7 +19,7 @@ class Sendgrid {
 }
 
 /**
- * @param {Express App} app The main game app
+ * @param {Express App} app The main app
  * @param {http/s} webServer The webserver
  * @param {Object} config The config
  */

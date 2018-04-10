@@ -1,7 +1,6 @@
 // Required for compiling
 require('babel-core/register');
 require('babel-polyfill');
-require('dotenv').config();
 
 // native modules
 import fs from 'fs';
@@ -9,6 +8,7 @@ import http from 'http';
 import https from 'https';
 
 // 3rd party
+import dotenv from 'dotenv';
 import express from 'express';
 import mongoose from 'mongoose';
 import Promise from 'bluebird';
@@ -16,68 +16,70 @@ import Promise from 'bluebird';
 // Custom
 import API from './api';
 import Logger from './components/logger';
-import App from './app';
+import {generate} from '../utils/configure';
+import Framework from './app';
 
-/************************************
- *            FILE CHECK            *
- ************************************/
-// Check if we have a data directory
-if (!fs.existsSync(`${__dirname}/data`)) {
-    console.error('ERROR: You you do have any app/data directory.');
-    process.exit();
+// load .env file
+const dotloaded = dotenv.config();
+
+if (dotloaded.error) {
+  throw new Error(dotloaded.result.error);
 }
 
-// check we have a config
-if (!fs.existsSync(`${__dirname}/../config.json`)) {
-    console.error('ERROR: You do not have a config.json file.');
-    process.exit();
-}
-
-let config = require(`${__dirname}/../config.json`);
+let config = generate();
 
 /************************************
  *          INITIALISATION          *
  ************************************/
 // Create our Express server
-const server = express();
+const app = express();
 
 // Connect to the MongoDB
 Promise.promisifyAll(mongoose);
-mongoose.connect(config.mongo_db).then(
+mongoose.connect(config.database.drivers.mongodb.host).then(
     () => {
         let webServer;
+        let webServerApi;
 
         // if an SSL cert is defined, start a HTTPS server
-        if (config.server.certificate.key) {
+        if (config.security.certificate.key) {
             webServer = https.createServer({
-                key: fs.readFileSync(config.server.certificate.key, 'utf8'),
-                cert: fs.readFileSync(config.server.certificate.cert, 'utf8'),
+                key: fs.readFileSync(config.security.certificate.key, 'utf8'),
+                cert: fs.readFileSync(config.security.certificate.cert, 'utf8'),
                 ca: [
-                    fs.readFileSync(config.server.certificate.ca, 'utf8'),
+                    fs.readFileSync(config.security.certificate.ca, 'utf8'),
                 ],
-            }, server);
+            }, app);
+            webServerApi = https.createServer({
+                key: fs.readFileSync(config.security.certificate.key, 'utf8'),
+                cert: fs.readFileSync(config.security.certificate.cert, 'utf8'),
+                ca: [
+                    fs.readFileSync(config.security.certificate.ca, 'utf8'),
+                ],
+            }, app);
         } else {
             // otherwise an HTTP server
-            webServer = http.createServer(server);
+            webServer = http.createServer(app);
+            webServerApi = http.createServer(app);
         }
 
         const logger = new Logger({
             level: (process.env.NODE_ENV === 'development' ? 'info' : 'error'),
-            debugFile: '../logs/debug.log',
-            infoFile: '../logs/info.log',
-            warnFile: '../logs/warn.log',
-            errorFile: '../logs/error.log',
+            debugFile: `${__dirname}/../logs/debug.log`,
+            infoFile: `${__dirname}/../logs/info.log`,
+            warnFile: `${__dirname}/../logs/warn.log`,
+            errorFile: `${__dirname}/../logs/error.log`,
         });
 
-        server.set('logger', logger);
+        app.set('logger', logger);
 
-        const GameServer = new App(webServer, config, logger);
+        const FrameworkServer = new Framework(webServer, config, logger);
         // eslint-disable-next-line
-        const RestServer = API(server, config);
+        const RestServer = API(app, webServerApi, config);
 
-        // On shutdown signal, gracefully shutdown the game server.
+        // On shutdown signal, gracefully shutdown the server.
         process.on('SIGTERM', async function() {
-            await GameServer.shutdown();
+            await FrameworkServer.shutdown();
             process.exit();
         });
     },

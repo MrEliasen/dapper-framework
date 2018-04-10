@@ -30,6 +30,13 @@ class AccountNotifications extends React.Component {
                                 </td>
                                 <td className="text-right"><a href="#" className="btn btn-primary btn-sm">Enable</a></td>
                             </tr>
+                            <tr>
+                                <td>
+                                    Friend Requests<br />
+                                    <small>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Fugiat, quas architecto facere, dicta dolorum exercitationem iste obcaecati voluptate alias consectetur repudiandae sapiente dignissimos delectus voluptatum sunt. Id tempore veniam eius.</small>
+                                </td>
+                                <td className="text-right"><a href="#" className="btn btn-primary btn-sm">Enable</a></td>
+                            </tr>
                         </tbody>
                     </Table>
                 </CardBody>
