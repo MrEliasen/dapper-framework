@@ -1,12 +1,7 @@
 # Logs
-logs
 *.log
 npm-debug.log*
 .DS_STORE
-error.log
-debug.log
-combined.log
-app/logs/*.log
 
 # Runtime data
 pids
@@ -42,6 +37,8 @@ jspm_packages
 .node_repl_history
 
 # Live files
-config.json
-app/data
-dist
+config/*.js
+!config/samples/*.js
+src/data
+build
+.env
