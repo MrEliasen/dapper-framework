@@ -2,6 +2,7 @@
     "name": "dapper-framework-client",
     "version": "0.1.0",
     "description": "The client for the Dapper Framework",
+    "license": "MIT",
     "scripts": {
         "start": "webpack-dev-server --progress --colors --inline --config webpack.development.js",
         "lint": "eslint src",

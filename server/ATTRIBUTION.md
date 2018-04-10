@@ -1,2 +1,0 @@
-This framework is build with the core of the "Path To Power" repository by Mark Eliasen (https://github.com/MrEliasen/path-to-power).
-The Path To Power repository is licensed under the Creative Commons Attribution 3.0 Unported (CC BY 3.0).
