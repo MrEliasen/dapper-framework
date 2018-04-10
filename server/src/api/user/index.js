@@ -1,7 +1,10 @@
-import activationEmail from '../../data/emails/activation.js';
-import verificationEmail from '../../data/emails/verification.js';
+import activationEmail from '../../templates/emails/activation.js';
+import verificationEmail from '../../templates/emails/verification.js';
 import IdentityModel from '../models/identity';
 import UserModel from '../models/user';
+import CharacterModel from '../../components/character/model';
+import ItemModel from '../../components/item/model';
+import FactionModel from '../../components/faction/model';
 import uuid from 'uuid/v4';
 import crypto from 'crypto';
 
@@ -62,7 +65,7 @@ export function updateUser(req, res) {
                     });
                 }
 
-                const token = crypto.createHmac('sha256', req.app.get('config').api.signingKey);
+                const token = crypto.createHmac('sha256', req.app.get('config').security.signingSecret);
                 token.update(uuid());
 
                 user.newEmail = req.body.email;
@@ -79,7 +82,7 @@ export function updateUser(req, res) {
                 });
             }
 
-            const minLen = req.app.get('config').api.authentication.password.minlen;
+            const minLen = req.app.get('config').security.password.minlen;
             if (req.body.password.length < minLen) {
                 return res.status(400).json({
                     status: 400,
@@ -124,7 +127,7 @@ export function updateUser(req, res) {
 
                  // setup email data with unicode symbols
                 let mailOptions = {
-                    from: req.app.get('config').mailserver.sender,
+                    from: req.app.get('config').mail.sender,
                     to: user.newEmail,
                     subject: verificationEmail.title,
                     html: verificationEmail.body(link),
@@ -160,8 +163,51 @@ export function updateUser(req, res) {
  * @param  {Express Request} req
  * @param  {Express Response} res
  */
-export function deleteUser(req, res) {
+export async function deleteUser(req, res) {
+    try {
+        const user = await UserModel.findOneAsync({ _id: req.user._id });
 
+        if (!user) {
+            return res.status(401).json({
+                status: 401,
+                error: 'Invalid authentication token.',
+            });
+        }
+
+        const characters = await CharacterModel.findAsync({user_id: user._id.toString()});
+
+        if (characters) {
+            const characterIDs = characters.map((obj) => {
+                return obj._id.toString();
+            });
+
+            const factions = await FactionModel.findAsync({leader_id: {$in: characterIDs}});
+
+            if (factions && factions.length > 0) {
+                return res.status(400).json({
+                    status: 400,
+                    error: 'You cannot delete your account while one or more of your characters are the leader of a faction.',
+                });
+            }
+
+            await ItemModel.deleteManyAsync({ character_id: { $in: characterIDs } });
+            await Promise.all(characters.map((obj) => obj.removeAsync()));
+        }
+
+        await IdentityModel.deleteManyAsync({ userId: user._id });
+        await user.removeAsync();
+
+        return res.json({
+            status: 200,
+        });
+    } catch (err) {
+        req.app.get('logger').error(err);
+
+        return res.status(500).json({
+            status: 500,
+            error: 'Something went wrong. Please try again in a moment.',
+        });
+    }
 }
 
 /**
@@ -173,7 +219,7 @@ export async function getUser(req, res) {
     try {
         const identities = await IdentityModel.findAsync(
             {userId: req.user._id},
-            {_id: 0, provider: 1, date_added: 1}
+            { _id: 0, provider: 1, providerId: 1, date_added: 1}
         );
 
         res.json({
@@ -223,7 +269,7 @@ export function createUser(req, res) {
         });
     }
 
-    const minLen = req.app.get('config').api.authentication.password.minlen;
+    const minLen = req.app.get('config').security.password.minlen;
     if (req.body.password.length < minLen) {
         return res.status(400).json({
             status: 400,
@@ -256,13 +302,14 @@ export function createUser(req, res) {
             });
         }
 
-        const requireActivation = req.app.get('config').api.authentication.providers.local.activationLink;
+        const localAuth = req.app.get('config').auth.providers.find((obj) => obj.id === 'local');
+        const requireActivation = localAuth.activationLink;
         let newUser;
         let token;
 
         if (requireActivation) {
             // create activation key
-            token = crypto.createHmac('sha256', req.app.get('config').api.signingKey);
+            token = crypto.createHmac('sha256', req.app.get('config').security.signingSecret);
             token.update(uuid());
         }
 
@@ -294,7 +341,7 @@ export function createUser(req, res) {
 
              // setup email data with unicode symbols
             let mailOptions = {
-                from: req.app.get('config').mailserver.sender,
+                from: req.app.get('config').mail.sender,
                 to: newUser.email,
                 subject: activationEmail.title,
                 html: activationEmail.body(link),
@@ -321,51 +368,35 @@ export function createUser(req, res) {
  * @param  {Express Response} res
  */
 export function verifyEmail(req, res) {
+    const redirectUrl = `${req.app.get('config').app.clientUrl}/verified`;
+
     if (!req.query.token || !req.query.token.length) {
-        return res.status(400).json({
-            status: 400,
-            error: 'Missing verification token.',
-        });
+        return res.redirect(`${redirectUrl}?error=Missing verification token`);
     }
 
     if (req.query.token.length !== 64) {
-        return res.status(400).json({
-            status: 400,
-            error: 'Invalid verification token.',
-        });
+        return res.redirect(`${redirectUrl}?error=Invalid verification token`);
     }
 
     UserModel.findOne({_id: escape(req.params.userId), activationToken: escape(req.query.token)}, async (err, user) => {
         if (err) {
-            return res.status(500).json({
-                status: 500,
-                error: 'Something went wrong. Please try again in a moment.',
-            });
+            return res.redirect(`${redirectUrl}?error=Something went wrong. Please try again in a moment`);
         }
 
         if (!user || !user.newEmail) {
-            return res.status(400).json({
-                status: 400,
-                error: 'Invalid verification token.',
-            });
+            return res.redirect(`${redirectUrl}?error=Invalid verification token`);
         }
 
         const conflict = await checkEmailExists(user.newEmail, req.app.get('logger'));
 
         // check if an error occured
         if (conflict === 500) {
-            return res.status(500).json({
-                status: 500,
-                error: 'Something went wrong. Please try again in a moment.',
-            });
+            return res.redirect(`${redirectUrl}?error=Something went wrong. Please try again in a moment`);
         }
 
         // If the email was already in use
         if (conflict) {
-            return res.status(409).json({
-                status: 409,
-                error: 'An account is already signed up using that email.',
-            });
+            return res.redirect(`${redirectUrl}?error=An account is already signed up using that email`);
         }
 
         // activate the user and remove the token
@@ -375,13 +406,10 @@ export function verifyEmail(req, res) {
 
         user.save((err) => {
             if (err) {
-                return res.status(500).json({
-                    status: 500,
-                    error: 'Sometihng went wrong. Please try again in a moment.',
-                });
+                return res.redirect(`${redirectUrl}?error=Sometihng went wrong. Please try again in a moment`);
             }
 
-            res.redirect(`${req.app.get('config').clientUrl}/verified`);
+            res.redirect(`${req.app.get('config').app.clientUrl}/verified`);
         });
     });
 }

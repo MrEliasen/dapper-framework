@@ -1,9 +1,13 @@
+// Required for compiling
+require('babel-core/register');
+require('babel-polyfill');
+
 import helmet from 'helmet';
 import bodyParser from 'body-parser';
 import contentFilter from 'content-filter';
 import passport from 'passport';
 import express from 'express';
-import nodemailer from 'nodemailer';
+import mailer from './mailer';
 
 // API Route/enpoint controllers
 import {
@@ -31,7 +35,7 @@ import {
  * @param  {HTTP/S}  webserver The HTTP/s webserver
  * @param  {Express} app       Express app
  */
-export default function(app, config) {
+export default function(app, webServer, config) {
     app.set('config', config);
     app.use(bodyParser.json());
     app.use(helmet());
@@ -42,15 +46,8 @@ export default function(app, config) {
     app.use(contentFilter({
         methodList: ['GET', 'POST'],
     }));
-    app.set('mailer', nodemailer.createTransport({
-            host: config.mailserver.host,
-            port: config.mailserver.port,
-            auth: {
-                user: config.mailserver.username,
-                pass: config.mailserver.password,
-            },
-        })
-    );
+
+    app.set('mailer', mailer(config));
 
     // Set needed headers for the application.
     app.use(function(req, res, next) {
@@ -67,7 +64,7 @@ export default function(app, config) {
     });
 
     // load all authentication strategies
-    loadStrategies(passport, app.get('logger'));
+    loadStrategies(passport, app.get('logger'), config);
 
     // setup API routes
     // eslint-disable-next-line
@@ -114,6 +111,6 @@ export default function(app, config) {
     app.use('/api', routes);
 
     // listen on port 80
-    app.listen(config.api.port);
+    webServer.listen(config.api.port);
     console.log(`API listening on port ${config.api.port}`);
 };

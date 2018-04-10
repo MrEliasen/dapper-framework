@@ -1,7 +1,7 @@
 import LocalStrategy from 'passport-local';
 import UserModel from '../../models/user';
-import passwordResetEmail from '../../../data/emails/passwordReset.js';
-import newPasswordEmail from '../../../data/emails/passwordNew.js';
+import passwordResetEmail from '../../../templates/emails/passwordReset.js';
+import newPasswordEmail from '../../../templates/emails/passwordNew.js';
 import uuid from 'uuid/v4';
 import crypto from 'crypto';
 
@@ -113,7 +113,7 @@ export function resetConfirm(req, res) {
         }
 
         // generate the password reset token
-        const passwordLength = req.app.get('config').api.authentication.password.minlen;
+        const passwordLength = req.app.get('config').auth.password.minlen;
         let newPassword = crypto.createHash('sha1');
         newPassword.update(uuid());
         newPassword = newPassword.digest('hex').substr(0, passwordLength);
@@ -136,7 +136,7 @@ export function resetConfirm(req, res) {
 
              // setup email data with unicode symbols
             let mailOptions = {
-                from: req.app.get('config').mailserver.sender,
+                from: req.app.get('config').mail.sender,
                 to: user.email,
                 subject: newPasswordEmail.title,
                 html: newPasswordEmail.body(newPassword),
@@ -189,7 +189,7 @@ export function passwordReset(req, res) {
             }
 
             // check if we already sent an email in the last 15 mins
-            if (user.passwordReset && user.passwordRset.created > new Date().getTime() - (15 * 60 * 1000)) {
+            if (user.passwordReset && user.passwordReset.created > new Date().getTime() - (15 * 60 * 1000)) {
                 return res.json({
                     status: 200,
                     message: 'If the email you entered was valid, you should receive a reset link momentarily!',
@@ -197,7 +197,7 @@ export function passwordReset(req, res) {
             }
 
             // generate the password reset token
-            let token = crypto.createHmac('sha256', req.app.get('config').api.signingKey);
+            let token = crypto.createHmac('sha256', req.app.get('config').security.signingSecret);
             token.update(uuid());
 
             // create the password reset object, store in the user model.
@@ -213,7 +213,7 @@ export function passwordReset(req, res) {
 
                  // setup email data with unicode symbols
                 let mailOptions = {
-                    from: req.app.get('config').mailserver.sender,
+                    from: req.app.get('config').mail.sender,
                     to: user.email,
                     subject: passwordResetEmail.title,
                     html: passwordResetEmail.body(link, req.connection.remoteAddress),

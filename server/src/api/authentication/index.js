@@ -1,5 +1,4 @@
 import passport from 'passport';
-import config from '../../../config.json';
 import UserModel from '../models/user';
 import IdentityModel from '../models/identity';
 import jwt from 'jsonwebtoken';
@@ -9,29 +8,48 @@ import * as localAuth from './strategies/local';
 import oauthSetup from './strategies/oauth';
 
 /**
+ * Outputs API response or redirects the response to the client
+ * @param  {Express Request}  req
+ * @param  {Express Response} res
+ * @param  {String|Object}    output
+ */
+function output(req, res, output) {
+    const redirect = req.params.provider ? true : false;
+    const errorUrl = `${req.app.get('config').app.clientUrl}/auth?error=`;
+
+    if (redirect) {
+        return res.redirect(`${errorUrl}${output.error || output.message}`);
+    }
+
+    res.status(output.status || 200).json(output);
+}
+
+/**
  * Loads the authentication strategies
  * @param  {Express} app
  */
-export function loadStrategies(passport, logger) {
-    config.api.authentication.providers.forEach((provider) => {
-        let callbackUrl = `${config.api.domain}${[80, 443].includes(config.api.post) ? '' : `:${config.api.port}`}/api/auth/provider/${provider.id}/callback`;
+export function loadStrategies(passport, logger, config) {
+    config.auth.providers.forEach((provider) => {
+        let callbackUrl = `${config.api.url}${[80, 443].includes(config.api.port) ? '' : `:${config.api.port}`}/api/auth/provider/${provider.id}/callback`;
 
-        // if its the local auth provider, we have to use a separate strategy from OAuth.
-        if (provider.id === 'local') {
-            return localAuth.setup(passport, logger);
-        }
+        if (provider.enabled) {
+            // if its the local auth provider, we have to use a separate strategy from OAuth.
+            if (provider.id === 'local') {
+                return localAuth.setup(passport, logger);
+            }
 
-        try {
-            oauthSetup(
-                passport,
-                {
-                    ...provider,
-                    callbackUrl,
-                },
-                logger
-            );
-        } catch (err) {
-            logger.error(err);
+            try {
+                oauthSetup(
+                    passport,
+                    {
+                        ...provider,
+                        callbackUrl,
+                    },
+                    logger
+                );
+            } catch (err) {
+                logger.error(err);
+            }
         }
     });
 }
@@ -54,14 +72,14 @@ export const resetConfirm = localAuth.resetConfirm;
  */
 export function activateUser(req, res) {
     if (!req.query.token || !req.query.token.length) {
-        return res.status(400).json({
+        return output(req, res, {
             status: 400,
             error: 'Missing activation token.',
         });
     }
 
     if (req.query.token.length !== 64) {
-        return res.status(400).json({
+        return output(req, res, {
             status: 400,
             error: 'Invalid activation token.',
         });
@@ -69,14 +87,14 @@ export function activateUser(req, res) {
 
     UserModel.findOne({_id: escape(req.params.userId), activationToken: escape(req.query.token)}, (err, user) => {
         if (err) {
-            return res.status(500).json({
+            return output(req, res, {
                 status: 500,
                 error: 'Something went wrong. Please try again in a moment.',
             });
         }
 
         if (!user) {
-            return res.status(400).json({
+            return output(req, res, {
                 status: 400,
                 error: 'Invalid activation token.',
             });
@@ -88,13 +106,13 @@ export function activateUser(req, res) {
 
         user.save((err) => {
             if (err) {
-                return res.status(500).json({
+                return output(req, res, {
                     status: 500,
                     error: 'Sometihng went wrong. Please try again in a moment.',
                 });
             }
 
-            return res.status(200).json({
+            return output(req, res, {
                 status: 200,
                 message: 'Your account has been activated!',
             });
@@ -115,7 +133,7 @@ function linkNewUser(req, res, identity) {
 
     newUser.save((err) => {
         if (err) {
-            return res.status(500).json({
+            return output(req, res, {
                 status: 500,
                 message: 'Something went wrong. Please try again in a moment.',
             });
@@ -125,7 +143,7 @@ function linkNewUser(req, res, identity) {
 
         identity.save((err) => {
             if (err) {
-                return res.status(500).json({
+                return output(req, res, {
                     status: 500,
                     message: 'Something went wrong. Please try again in a moment.',
                 });
@@ -148,9 +166,9 @@ function linkNewUser(req, res, identity) {
 function authenticateProvider(req, res) {
     const providerToken = req.body.providerToken;
 
-    jwt.verify(providerToken, req.app.get('config').api.signingKey, (err, decoded) => {
+    jwt.verify(providerToken, req.app.get('config').security.signingSecret, (err, decoded) => {
         if (err) {
-            return res.status(401).json({
+            return output(req, res, {
                 status: 401,
                 message: 'Invalid authorisation token.',
             });
@@ -158,14 +176,14 @@ function authenticateProvider(req, res) {
 
         IdentityModel.findOne({_id: decoded.identity}, (err, identity) => {
             if (err) {
-                return res.status(500).json({
+                return output(req, res, {
                     status: 500,
                     message: 'Something went wrong. Please try again in a moment.',
                 });
             }
 
             if (!identity) {
-                return res.status(401).json({
+                return output(req, res, {
                     status: 401,
                     message: 'Invalid authorisation token.',
                 });
@@ -182,14 +200,14 @@ function authenticateProvider(req, res) {
             // fetch the user details, and send back a user-jwt token
             UserModel.findOne({_id: identity.userId}, (err, user) => {
                 if (err) {
-                    return res.status(500).json({
+                    return output(req, res, {
                         status: 500,
                         message: 'Something went wrong. Please try again in a moment.',
                     });
                 }
 
                 if (!user) {
-                    return res.status(401).json({
+                    return output(req, res, {
                         status: 401,
                         message: 'Invalid authorisation token.',
                     });
@@ -220,16 +238,16 @@ export function authenticate(req, res, next) {
     let method = (req.body.method || req.params.provider) + ''.toLowerCase();
 
     if (!method) {
-        return res.status(400).json({
+        return output(req, res, {
             status: 400,
             error: 'Invalid authentication method.',
         });
     }
 
-    const provider = req.app.get('config').api.authentication.providers.find((obj) => obj.id === method);
+    const provider = req.app.get('config').auth.providers.find((obj) => obj.id === method);
 
     if (!provider) {
-        return res.status(400).json({
+        return output(req, res, {
             status: 400,
             error: 'Invalid authentication method.',
         });
@@ -238,7 +256,8 @@ export function authenticate(req, res, next) {
     return passport.authenticate(provider.id, Object.assign({session: false}, {scope: provider.scope || null}), (err, userDetails, info, status) => {
         if (err) {
             req.app.get('logger').error(err);
-            return res.status(400).json({
+
+            return output(req, res, {
                 status: 400,
                 error: 'Invalid authentication method.',
             });
@@ -248,7 +267,7 @@ export function authenticate(req, res, next) {
             return onAuth(req, res, userDetails, method !== 'local');
         }
 
-        res.status(status || 400).json({
+        return output(req, res, {
             status: status || 400,
             error: err || info.message,
         });
@@ -265,14 +284,14 @@ export function onAuth(req, res, data, redirect) {
         _id: data.user._id || null,
         session_token: data.user.session_token || null,
         identity: data.identity._id || null,
-    }, req.app.get('config').api.signingKey, {expiresIn: '1h'});
+    }, req.app.get('config').security.signingSecret, {expiresIn: '1h'});
 
     if (redirect) {
-        return res.redirect(`${req.app.get('config').clientUrl}/auth?token=${token}`);
+        return res.redirect(`${req.app.get('config').app.clientUrl}/auth?token=${token}`);
     }
 
     // send JWT back to client
-    res.json({
+    output(req, res, {
         status: 200,
         authToken: token,
     });
@@ -283,16 +302,17 @@ export function onAuth(req, res, data, redirect) {
  * @param  {Express} app
  */
 export function getAuthList(req, res) {
-    const providers = config.api.authentication.providers.filter((provider) => provider.enabled);
+    const config = req.app.get('config');
+    const providers = config.auth.providers.filter((provider) => provider.enabled);
     const authlist = providers.map((provider) => {
         return {
             id: provider.id,
             name: provider.name,
-            authUrl: `${config.api.domain}${[80, 443].includes(config.api.post) ? '' : `:${config.api.port}`}/api/auth/provider/${provider.id}`,
+            authUrl: `${config.api.url}${[80, 443].includes(config.api.port) ? '' : `:${config.api.port}`}/api/auth/provider/${provider.id}`,
         };
     });
 
-    res.json({
+    output(req, res, {
         status: 200,
         authlist,
     });
@@ -308,15 +328,15 @@ export function isAuthenticated(req, res, next) {
     const token = req.headers['authorization'];
 
     if (!token) {
-        return res.status(401).json({
+        return output(req, res, {
             status: 401,
             message: 'Invalid authorisation token.',
         });
     }
 
-    jwt.verify(token.replace('Bearer ', ''), req.app.get('config').api.signingKey, (err, decoded) => {
+    jwt.verify(token.replace('Bearer ', ''), req.app.get('config').security.signingSecret, (err, decoded) => {
         if (err) {
-            return res.status(401).json({
+            return output(req, res, {
                 status: 401,
                 message: 'Invalid authorisation token.',
             });
@@ -326,7 +346,7 @@ export function isAuthenticated(req, res, next) {
         // This could be removed, and simply rely on the auth token.
         if (req.params.userId) {
             if (req.params.userId !== decoded._id) {
-                return res.status(401).json({
+                return output(req, res, {
                     status: 401,
                     message: 'Invalid authorisation token.',
                 });
@@ -338,7 +358,7 @@ export function isAuthenticated(req, res, next) {
             {_id: 1, email: 1, session_token: 1, activated: 1, date_added: 1, password: 1},
             (err, user) => {
                 if (err || !user) {
-                    return res.status(401).json({
+                    return output(req, res, {
                         status: 401,
                         message: 'Invalid authorisation token.',
                     });
@@ -363,23 +383,23 @@ export function isAuthenticated(req, res, next) {
  */
 export function linkProvider(req, res) {
     if (!req.body.provider || !req.body.authToken) {
-        return res.status(400).json({
+        return output(req, res, {
             status: 400,
             error: 'Invalid provider token',
         });
     }
 
-    jwt.verify(req.body.authToken, req.app.get('config').api.signingKey, (err, authTokenDecoded) => {
+    jwt.verify(req.body.authToken, req.app.get('config').security.signingSecret, (err, authTokenDecoded) => {
         if (err) {
-            return res.status(400).json({
+            return output(req, res, {
                 status: 400,
                 error: 'Invalid provider token',
             });
         }
 
-        jwt.verify(req.body.provider, req.app.get('config').api.signingKey, (err, decoded) => {
+        jwt.verify(req.body.provider, req.app.get('config').security.signingSecret, (err, decoded) => {
             if (err) {
-                return res.status(400).json({
+                return output(req, res, {
                     status: 400,
                     error: 'Invalid provider token',
                 });
@@ -387,14 +407,14 @@ export function linkProvider(req, res) {
 
             IdentityModel.findOne({_id: decoded.identity}, (err, identity) => {
                 if (err) {
-                    return res.status(500).json({
+                    return output(req, res, {
                         status: 500,
                         error: 'Something went wrong. Please try again in a moment.',
                     });
                 }
 
                 if (!identity) {
-                    return res.status(400).json({
+                    return output(req, res, {
                         status: 400,
                         error: 'Invalid provider token',
                     });
@@ -404,13 +424,13 @@ export function linkProvider(req, res) {
 
                 identity.save((err) => {
                     if (err) {
-                        return res.status(500).json({
+                        return output(req, res, {
                             status: 500,
                             error: 'Something went wrong. Please try again in a moment.',
                         });
                     }
 
-                    return res.json({
+                    return output(req, res, {
                         status: 200,
                         message: 'Your account was linked!',
                     });
@@ -427,7 +447,7 @@ export function linkProvider(req, res) {
  */
 export function unlinkProvider(req, res) {
     if (!req.body.provider) {
-        return res.status(400).json({
+        return output(req, res, {
             status: 400,
             error: 'Invalid provider',
         });
@@ -435,14 +455,14 @@ export function unlinkProvider(req, res) {
 
     IdentityModel.findOne({provider: req.body.provider, userId: req.user._id}, (err, identity) => {
         if (err) {
-            return res.status(500).json({
+            return output(req, res, {
                 status: 500,
                 error: 'Something went wrong. Please try again in a moment.',
             });
         }
 
         if (!identity) {
-            return res.status(400).json({
+            return output(req, res, {
                 status: 400,
                 error: 'Provider is not linked to your account.',
             });
@@ -450,14 +470,15 @@ export function unlinkProvider(req, res) {
 
         identity.remove((err) => {
             if (err) {
-                return res.status(500).json({
+                return output(req, res, {
                     status: 500,
                     error: 'Something went wrong. Please try again in a moment.',
                 });
             }
 
-            return res.json({
+            return output(req, res, {
                 status: 200,
+                message: '',
             });
         });
     });
