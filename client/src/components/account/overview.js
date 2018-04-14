@@ -66,32 +66,37 @@ class AccountDetails extends React.Component {
                         </tbody>
                     </Table>
 
-                    <h5>3rd Party Details</h5>
-                    <Table striped>
-                        <thead>
-                            <tr>
-                                <th>Provider</th>
-                                <th>Account ID</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {
-                                this.props.identities &&
-                                this.props.identities.map((identity, index) => {
-                                    const provider = this.props.strategies.find((obj) => obj.id === identity.provider);
+                    {
+                        this.props.identities &&
+                        this.props.identities.length > 0 &&
+                        <React.Fragment>
+                            <h5>3rd Party Details</h5>
+                            <Table striped>
+                                <thead>
+                                    <tr>
+                                        <th>Provider</th>
+                                        <th>Account ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {
+                                        this.props.identities.map((identity, index) => {
+                                            const provider = this.props.strategies.find((obj) => obj.id === identity.provider);
 
-                                    if (!provider) {
-                                        return null;
+                                            if (!provider) {
+                                                return null;
+                                            }
+
+                                            return <tr key={index}>
+                                                <td>{provider.name}</td>
+                                                <td>{identity.providerId}</td>
+                                            </tr>;
+                                        })
                                     }
-
-                                    return <tr key={index}>
-                                        <td>{provider.name}</td>
-                                        <td>{identity.providerId}</td>
-                                    </tr>;
-                                })
-                            }
-                        </tbody>
-                    </Table>
+                                </tbody>
+                            </Table>
+                        </React.Fragment>
+                    }
                     <Notification />
                     <div className="dangerzone">
                         <p>This is where you can permanently delete your account. This is an irreversible action!</p>

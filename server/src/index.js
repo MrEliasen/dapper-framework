@@ -1,7 +1,3 @@
-// Required for compiling
-require('babel-core/register');
-require('babel-polyfill');
-
 // native modules
 import fs from 'fs';
 import http from 'http';
@@ -16,14 +12,14 @@ import Promise from 'bluebird';
 // Custom
 import API from './api';
 import Logger from './components/logger';
-import {generate} from '../utils/configure';
+import {generate} from 'utils/configure';
 import Framework from './app';
 
 // load .env file
 const dotloaded = dotenv.config();
 
 if (dotloaded.error) {
-  throw new Error(dotloaded.result.error);
+    throw new Error(dotloaded.result.error);
 }
 
 let config = generate();

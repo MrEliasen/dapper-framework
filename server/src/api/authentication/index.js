@@ -13,11 +13,11 @@ import oauthSetup from './strategies/oauth';
  * @param  {Express Response} res
  * @param  {String|Object}    output
  */
-function output(req, res, output) {
+function output(req, res, output, forceRedirect = false) {
     const redirect = req.params.provider ? true : false;
     const errorUrl = `${req.app.get('config').app.clientUrl}/auth?error=`;
 
-    if (redirect) {
+    if (redirect || forceRedirect) {
         return res.redirect(`${errorUrl}${output.error || output.message}`);
     }
 
@@ -75,14 +75,14 @@ export function activateUser(req, res) {
         return output(req, res, {
             status: 400,
             error: 'Missing activation token.',
-        });
+        }, true);
     }
 
     if (req.query.token.length !== 64) {
         return output(req, res, {
             status: 400,
             error: 'Invalid activation token.',
-        });
+        }, true);
     }
 
     UserModel.findOne({_id: escape(req.params.userId), activationToken: escape(req.query.token)}, (err, user) => {
@@ -90,14 +90,14 @@ export function activateUser(req, res) {
             return output(req, res, {
                 status: 500,
                 error: 'Something went wrong. Please try again in a moment.',
-            });
+            }, true);
         }
 
         if (!user) {
             return output(req, res, {
                 status: 400,
                 error: 'Invalid activation token.',
-            });
+            }, true);
         }
 
         // activate the user and remove the token
@@ -109,13 +109,13 @@ export function activateUser(req, res) {
                 return output(req, res, {
                     status: 500,
                     error: 'Sometihng went wrong. Please try again in a moment.',
-                });
+                }, true);
             }
 
             return output(req, res, {
                 status: 200,
                 message: 'Your account has been activated!',
-            });
+            }, true);
         });
     });
 }
@@ -255,11 +255,13 @@ export function authenticate(req, res, next) {
 
     return passport.authenticate(provider.id, Object.assign({session: false}, {scope: provider.scope || null}), (err, userDetails, info, status) => {
         if (err) {
-            req.app.get('logger').error(err);
+            if (typeof err !== 'string') {
+                req.app.get('logger').error(err);
+            }
 
             return output(req, res, {
                 status: 400,
-                error: 'Invalid authentication method.',
+                error: (typeof err === 'string' ? err : 'Invalid authentication method.'),
             });
         }
 

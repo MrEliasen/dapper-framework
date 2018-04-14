@@ -1,7 +1,7 @@
 import LocalStrategy from 'passport-local';
 import UserModel from '../../models/user';
-import passwordResetEmail from '../../../templates/emails/passwordReset.js';
-import newPasswordEmail from '../../../templates/emails/passwordNew.js';
+import passwordResetEmail from 'config/emails/passwordReset.js';
+import newPasswordEmail from 'config/emails/passwordNew.js';
 import uuid from 'uuid/v4';
 import crypto from 'crypto';
 

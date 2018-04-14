@@ -1,5 +1,5 @@
-import activationEmail from '../../templates/emails/activation.js';
-import verificationEmail from '../../templates/emails/verification.js';
+import activationEmail from 'config/emails/activation.js';
+import verificationEmail from 'config/emails/verification.js';
 import IdentityModel from '../models/identity';
 import UserModel from '../models/user';
 import uuid from 'uuid/v4';
@@ -162,7 +162,7 @@ export function updateUser(req, res) {
  */
 export async function deleteUser(req, res) {
     try {
-        const user = await UserModel.findOneAsync({_id: req.user._id});
+        const user = await UserModel.findOneAsync({ _id: req.user._id });
 
         if (!user) {
             return res.status(401).json({
@@ -171,7 +171,7 @@ export async function deleteUser(req, res) {
             });
         }
 
-        await IdentityModel.deleteManyAsync({userId: user._id});
+        await IdentityModel.deleteManyAsync({ userId: user._id });
         await user.removeAsync();
 
         return res.json({
@@ -280,7 +280,7 @@ export function createUser(req, res) {
         }
 
         const localAuth = req.app.get('config').auth.providers.find((obj) => obj.id === 'local');
-        const requireActivation = localAuth.activationLink;
+        const requireActivation = localAuth.activation_link;
         let newUser;
         let token;
 

@@ -52,7 +52,7 @@ class Header extends React.Component {
         return (
             <Navbar color="primary-dark" dark expand="md" id="header">
                 <Container>
-                    <NavbarBrand href="#" onClick={() => this.props.history.push('/')}>Path To Power</NavbarBrand>
+                    <NavbarBrand href="#" onClick={() => this.props.history.push('/')}>Dapper Framework</NavbarBrand>
                     <NavbarToggler onClick={this.toggle.bind(this)} className="mr-2" />
                     <Collapse isOpen={!this.state.isOpen} navbar>
                         <Nav className="mr-auto" navbar>
